@@ -1,13 +1,22 @@
-from fastapi import FastAPI
+from fastapi import FastAPI # type: ignore
 from typing import Union
 from app.providers.flipkart import FlipkartScraper
 from app.providers.amazon import AmazonAPIWrapper
 from app.services.storage import StorageManager
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse # type: ignore
+from fastapi.middleware.cors import CORSMiddleware
+
+
+
 import os
 
 app = FastAPI()
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # For development only!
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 @app.get("/")
 def root():
     return RedirectResponse(url="/docs")
@@ -27,7 +36,8 @@ def search(query: Union[str, None] = None, pages: int = 1, min_price: Union[int,
     flipkart_scraper = FlipkartScraper()
     flipkart_results = flipkart_scraper.search(query, max_pages=pages, filters=filters)
 
-    amazon_api = AmazonAPIWrapper(os.environ.get("SCRAPEHERO_API"))
+    # amazon_api = AmazonAPIWrapper(os.environ.get("SCRAPEHERO_API"))
+    amazon_api = AmazonAPIWrapper("V407cXNPkwMlBrri0SKEFWeBrj6rfapS")
     amazon_results= amazon_api.search(query, max_pages=pages, filters=filters)
 
     storage = StorageManager()
