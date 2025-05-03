@@ -69,7 +69,7 @@ export default function ProductSearch() {
         max_price: priceRange[1].toString(),
       });
 
-      const response = await fetch(`http://127.0.0.1:8000/search?${params}`);
+      const response = await fetch(`https://project-1-wf2x.onrender.com/search?${params}`);
       // console.log(response)
       if (!response.ok) throw new Error("Failed to fetch results");
 
