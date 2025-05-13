@@ -1,9 +1,10 @@
-import ProductSearch from "@/components/product-search"
+import ProductSearch from "@/components/product-search";
+import LayoutWithSidebar from "@/components/LayoutWithSidebar";
 
-export default function Home() {
+export default async function HomePage() {
   return (
-    <div className="flex min-h-screen">
+    <LayoutWithSidebar>
       <ProductSearch />
-    </div>
-  )
+    </LayoutWithSidebar>
+  );
 }

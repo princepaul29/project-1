@@ -127,14 +127,14 @@ export default function ProductSearch() {
     <>
       <div className="flex w-full">
         {/* Sidebar - visible on desktop */}
-        <div className="hidden md:block w-64 border-r min-h-screen">
+        {/* <div className="hidden md:block w-64 border-r min-h-screen">
           <Sidebar priceRange={priceRange} onPriceChange={setPriceRange} />
-        </div>
+        </div> */}
 
         {/* Main content */}
         <div className="flex-1">
           {/* Mobile menu */}
-          <div className="md:hidden p-4 border-b">
+          {/* <div className="md:hidden p-4 border-b">
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="outline" size="icon">
@@ -148,7 +148,7 @@ export default function ProductSearch() {
                 />
               </SheetContent>
             </Sheet>
-          </div>
+          </div> */}
           <div
             className={`${
               hasSearched

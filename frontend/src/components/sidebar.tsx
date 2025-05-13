@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Home, LogIn, User } from "lucide-react"
+import { Home, LogIn, User ,SquareUser } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider";
 
@@ -22,6 +22,12 @@ export default function Sidebar({ priceRange, onPriceChange }: SidebarProps) {
           <Link href="/login">
             <LogIn className="mr-2 h-5 w-5" />
             Login
+          </Link>
+        </Button>
+        <Button variant="ghost" className="w-full justify-start" asChild>
+          <Link href="/admin">
+            <SquareUser className="mr-2 h-5 w-5" />
+            admin
           </Link>
         </Button>
       </div>
