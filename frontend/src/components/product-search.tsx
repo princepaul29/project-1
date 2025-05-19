@@ -16,7 +16,9 @@ import ProductCard from "@/components/product-card";
 import Sidebar from "@/components/sidebar";
 import RatingPanel from "@/components/rating-panel";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePriceRangeStore } from "@/store/usePricerangestore";
 interface ProductCardProps {
+  review_count: any;
   url: string;
   name: string;
   id: any;
@@ -57,11 +59,53 @@ export default function ProductSearch() {
   >("none");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 0]);
+  // const [priceRange, setPriceRange] = useState<[number, number]>([0, 0]);
+  const { priceRange } = usePriceRangeStore();
+  const connectWebSocket = (searchId: string) => {
+    const ws = new WebSocket(`ws://127.0.0.1:8000/ws?search_id=${searchId}`);
+
+    ws.onopen = () => {
+      console.log("WebSocket connection opened");
+      setProducts([]); // clear previous results
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log("WebSocket message received:", data);
+        console.log("WebSocket message data: -.", data.data?.results);
+
+        const newProducts = data.data?.results;
+
+        if (Array.isArray(newProducts)) {
+          setProducts((prev) => [...prev,...newProducts]);
+          setLoading(false);
+        } else {
+          console.warn("No results to update products with.");
+        }
+      } catch (err) {
+        console.error("WebSocket message error:", err);
+      }
+    };
+
+    ws.onerror = (err) => {
+      console.error("WebSocket error", err);
+      setError("WebSocket error. Please try again.");
+      setLoading(false);
+    };
+
+    ws.onclose = () => {
+      console.log("WebSocket closed");
+      setLoading(false);
+    };
+  };
+
+ 
 
   const fetchProducts = async () => {
     setLoading(true);
     setError(null);
+
     try {
       const params = new URLSearchParams({
         query: searchQuery,
@@ -69,30 +113,35 @@ export default function ProductSearch() {
         max_price: priceRange[1].toString(),
       });
 
-      const response = await fetch(`https://project-1-wf2x.onrender.com/search?${params}`);
-      // console.log(response)
+      const response = await fetch(`http://127.0.0.1:8000/search?${params}`);
       if (!response.ok) throw new Error("Failed to fetch results");
 
       const data = await response.json();
-      console.log("RESPONSE ->", data);
-      const combinedResults = [
-        ...(data.flipkart_results || []).map((p: any) => ({
-          ...p,
-          source: "flipkart",
-          price: parseFloat(p.price),
-          rating: parseFloat(p.rating),
-        })),
-        ...(data.amazon_results || []).map((p: any) => ({
-          ...p,
-          source: "amazon",
-          price: parseFloat(p.price),
-          rating: parseFloat(p.rating),
-        })),
-      ];
-      setProducts(combinedResults);
+      console.log("Initial search response ->", data);
+
+      if (data.status === "cached") {
+        // const combinedResults = [
+        //   ...(data.flipkart_results || []).map((p: any) => ({
+        //     ...p,
+        //     source: "flipkart",
+        //     price: parseFloat(p.price),
+        //     rating: parseFloat(p.rating),
+        //   })),
+        //   ...(data.amazon_results || []).map((p: any) => ({
+        //     ...p,
+        //     source: "amazon",
+        //     price: parseFloat(p.price),
+        //     rating: parseFloat(p.rating),
+        //   })),
+        // ];
+        // setProducts(combinedResults);
+        setLoading(false);
+      } else if (data.status === "pending") {
+        connectWebSocket(data.search_id);
+        
+      }
     } catch (err) {
       setError("Failed to fetch products. Please try again.");
-    } finally {
       setLoading(false);
     }
   };
@@ -121,34 +170,18 @@ export default function ProductSearch() {
         return sorted;
     }
   };
-
- 
+console.log("Products ->", products); 
   return (
     <>
       <div className="flex w-full">
         {/* Sidebar - visible on desktop */}
-        <div className="hidden md:block w-64 border-r min-h-screen">
+        {/* <div className="hidden md:block w-64 border-r min-h-screen">
           <Sidebar priceRange={priceRange} onPriceChange={setPriceRange} />
-        </div>
+        </div> */}
 
         {/* Main content */}
         <div className="flex-1">
-          {/* Mobile menu */}
-          <div className="md:hidden p-4 border-b">
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="p-0">
-                <Sidebar
-                  priceRange={priceRange}
-                  onPriceChange={setPriceRange}
-                />
-              </SheetContent>
-            </Sheet>
-          </div>
+  
           <div
             className={`${
               hasSearched
@@ -160,7 +193,11 @@ export default function ProductSearch() {
             <div className={`p-4 ${hasSearched ? "border-b" : ""}`}>
               <div className="flex justify-center">
                 <div className="flex gap-2 w-full max-w-3xl min-w-2xl relative">
-                   <TypewriterInput searchQuery={searchQuery} setSearchQuery={setSearchQuery} handleKeyPress={handleKeyPress} />              
+                  <TypewriterInput
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    handleKeyPress={handleKeyPress}
+                  />
                   <Button onClick={handleSearch} variant="ghost">
                     <Search className="h-5 w-5" />
                   </Button>
@@ -222,18 +259,10 @@ export default function ProductSearch() {
                 <div className="text-center py-8 text-red-500">{error}</div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[calc(100vh-200px)] overflow-y-auto">
-                  {getSortedProducts().map((product, key) => (
+                  {getSortedProducts().map((product: { source: any; id: any; }, key: any) => (
                     <ProductCard
-                      key={`${product.source}-${key}`}
-                      product={{
-                        id: product.id,
-                        name: product.name || "Unknown Product",
-                        price: `₹${product.price.toLocaleString()}`,
-                        review: `${product?.rating}/5`,
-                        info: product?.source,
-                        // info: product?.description,
-                        url: product?.url || "/",
-                      }}
+                      key={`${product.source}-${product.id}-${key}`}
+                      product={product}
                       onRateClick={() => {
                         setSelectedProduct(`${product.source}-${product.id}`);
                         setShowRating(true);
@@ -250,8 +279,6 @@ export default function ProductSearch() {
   );
 }
 
-
-
 const suggestions = [
   "Search products...",
   "Search books...",
@@ -260,7 +287,11 @@ const suggestions = [
   "Search clothing...",
 ];
 
-const TypewriterInput = ({ searchQuery, setSearchQuery, handleKeyPress }:any) => {
+const TypewriterInput = ({
+  searchQuery,
+  setSearchQuery,
+  handleKeyPress,
+}: any) => {
   const [placeholder, setPlaceholder] = useState("");
   const [textIndex, setTextIndex] = useState(0);
   const [charIndex, setCharIndex] = useState(0);
@@ -268,24 +299,27 @@ const TypewriterInput = ({ searchQuery, setSearchQuery, handleKeyPress }:any) =>
 
   useEffect(() => {
     const currentText = suggestions[textIndex];
-    const timeout = setTimeout(() => {
-      if (!isDeleting) {
-        setPlaceholder(currentText.slice(0, charIndex + 1));
-        setCharIndex((prev) => prev + 1);
+    const timeout = setTimeout(
+      () => {
+        if (!isDeleting) {
+          setPlaceholder(currentText.slice(0, charIndex + 1));
+          setCharIndex((prev) => prev + 1);
 
-        if (charIndex + 1 === currentText.length) {
-          setTimeout(() => setIsDeleting(true), 1500); // pause before deleting
-        }
-      } else {
-        setPlaceholder(currentText.slice(0, charIndex - 1));
-        setCharIndex((prev) => prev - 1);
+          if (charIndex + 1 === currentText.length) {
+            setTimeout(() => setIsDeleting(true), 1500); // pause before deleting
+          }
+        } else {
+          setPlaceholder(currentText.slice(0, charIndex - 1));
+          setCharIndex((prev) => prev - 1);
 
-        if (charIndex === 0) {
-          setIsDeleting(false);
-          setTextIndex((prev) => (prev + 1) % suggestions.length);
+          if (charIndex === 0) {
+            setIsDeleting(false);
+            setTextIndex((prev) => (prev + 1) % suggestions.length);
+          }
         }
-      }
-    }, isDeleting ? 30 : 100); // typing and deleting speeds
+      },
+      isDeleting ? 30 : 100
+    ); // typing and deleting speeds
 
     return () => clearTimeout(timeout);
   }, [charIndex, isDeleting, textIndex]);

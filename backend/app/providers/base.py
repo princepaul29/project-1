@@ -42,8 +42,9 @@ class BaseProvider(ABC):
             if currency != "USD":
                 amount = converter.convert(amount, currency, "USD")
 
-            return int(amount)
+            return round(amount, 2)
         except:
+            print("[Error] Failed to parse price:", p)
             return None
     
     def _detect_currency(self, p):
