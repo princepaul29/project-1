@@ -16,6 +16,7 @@ from app.models.product import Product
 from app.models.click import Click
 from app.models.scraper_config import ScraperConfig
 from fastapi.responses import RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from urllib.parse import unquote
 import os
@@ -33,6 +34,13 @@ async def lifespan(app: FastAPI):
     # Called on shutdown if needed
 
 app = FastAPI(lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # or "*" for dev
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.add_middleware(VisitorMiddleware)
 
 app.include_router(clicks.router)
